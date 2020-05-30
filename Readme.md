@@ -5,8 +5,9 @@
 
 
 ## Vagrant deploy
-   vagrant up
-   vegrant ssh master
+To deploy all BeeGFS nodes, run:
+   	vagrant up
+   	vagrant ssh master
 
 ## Ansible Playbooks
 
@@ -21,3 +22,5 @@ Once in master, execute:
 
 
 Now, you can try some MPI.io stuff with IOR library.
+
+Note: Due distro problems, mdadm is not recognizing Centos 7, so u have to execute oss.yml again if it fails.
