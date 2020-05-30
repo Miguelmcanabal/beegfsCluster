@@ -1,0 +1,24 @@
+- hosts:
+  - cluster_beegfs_mds
+  become: true
+  vars:
+  roles:
+    - role: ahharu.mdadm
+  tasks:
+
+  - name: "Umount raid"
+    shell: umount /dev/md0 
+
+  - name: "Filesystem"
+    shell: mkfs.ext4 -i 2048 -I 512 -J size=400 -Odir_index,filetype /dev/md0
+
+  - name: Creates directory
+    file:
+      path: /data/meta01
+      state: directory
+
+  - name: "Mount raid"
+    shell: mount -onoatime,nodiratime /dev/md0 /data/meta01
+
+
+

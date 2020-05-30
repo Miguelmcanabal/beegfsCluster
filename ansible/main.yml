@@ -1,0 +1,178 @@
+---
+- hosts:
+  - cluster_beegfs_mgmt
+  - cluster_beegfs_mds
+  - cluster_beegfs_oss
+  - cluster_beegfs_client 
+  - cluster_beegfs_admon 
+  become: yes
+  tasks:
+  - name: Load package repo
+    get_url:
+      url: https://www.beegfs.io/release/latest-stable/dists/beegfs-rhel7.repo
+      dest: /etc/yum.repos.d/beegfs_rhel7.repo
+      mode: '1777'
+
+  - name: install the latest version of beegfs
+    yum:
+      name: beegfs-mgmtd  
+      state: latest
+    when: inventory_hostname in groups['cluster_beegfs_mgmt']
+
+  - name: install the latest version of beegfs
+    yum:
+      name: beegfs-meta,libbeegfs-ib   
+      state: latest
+    when: inventory_hostname in groups['cluster_beegfs_mds']
+
+  - name: install the latest version of beegfs
+    yum:
+      name: beegfs-storage,libbeegfs-ib 
+      state: latest
+    when: inventory_hostname in groups['cluster_beegfs_oss']
+
+  - name: install the latest version of beegfs
+    yum:
+      name: beegfs-client,beegfs-helperd,beegfs-utils  
+      state: latest
+    when: inventory_hostname in groups['cluster_beegfs_client']
+
+  - name: install the latest version of beegfs
+    yum:
+      name: beegfs-admon 
+      state: latest
+    when: inventory_hostname in groups['cluster_beegfs_admon']
+
+
+  - name: "Set mgmt storage"
+    command: /opt/beegfs/sbin/beegfs-setup-mgmtd -p  /data/beegfs/beegfs_mgmtd -f
+    
+    when: inventory_hostname in groups['cluster_beegfs_mgmt']
+
+
+  - name: "Set meta storage"
+    command: /opt/beegfs/sbin/beegfs-setup-meta -p /data/meta01/beegfs/beegfs_meta -f -s 2 -m mgmt
+    when: inventory_hostname in groups['cluster_beegfs_mds']
+
+  - name: "Set storage"
+    command: /opt/beegfs/sbin/beegfs-setup-storage -p /mnt/md0/ -f -s 3 -i 301 -m mgmt
+    when: inventory_hostname in groups['cluster_beegfs_oss']
+
+  - name: "Set mgmt on client"
+    command: /opt/beegfs/sbin/beegfs-setup-client -m mgmt
+    when: inventory_hostname in groups['cluster_beegfs_client']
+
+
+  - name: start mgmt
+    service:
+      name: beegfs-mgmtd
+      state: started
+    when: inventory_hostname in groups['cluster_beegfs_mgmt']
+
+
+  - name: start meta
+    service:
+      name: beegfs-meta
+      state: started
+    when: inventory_hostname in groups['cluster_beegfs_mds']
+
+  - name: start storage
+    service:
+      name: beegfs-storage
+      state: started
+    when: inventory_hostname in groups['cluster_beegfs_oss']
+
+  - name: start client
+    service:
+      name: beegfs-helperd
+      state: started
+    when: inventory_hostname in groups['cluster_beegfs_client']
+
+  - name: start client
+    service:
+      name: beegfs-client
+      state: started
+    when: inventory_hostname in groups['cluster_beegfs_client']
+
+   - name: config admon
+     shell: /opt/beegfs/sbin/beegfs-setup-admon -m mgmt
+     when: inventory_hostname in groups['cluster_beegfs_admon']
+
+  - name: start admon
+    service:
+      name: beegfs-admon
+      state: started
+    when: inventory_hostname in groups['cluster_beegfs_admon']
+
+
+
+  - name: install the latest version of openmpi
+    yum:
+      name: openmpi-devel 
+      state: latest
+    when: inventory_hostname in groups['cluster_beegfs_client']
+
+  - name: "mpi setup"
+    shell: /usr/bin/modulecmd bash add mpi
+    when: inventory_hostname in groups['cluster_beegfs_client']
+
+
+  - name: Load package repo
+    get_url:
+      url: https://github.com/hpc/ior/releases/download/3.2.1/ior-3.2.1.tar.gz
+      dest: /home/vagrant/
+      mode: '1777'
+    when: inventory_hostname in groups['cluster_beegfs_client']
+
+
+  - name: Extract
+    unarchive:
+      src: /home/vagrant/ior-3.2.1.tar.gz
+      dest: /home/vagrant/
+      remote_src: yes
+      mode: 01777
+      owner: vagrant
+    when: inventory_hostname in groups['cluster_beegfs_client']
+    become: false
+
+
+  - name: Add a line to a file if the file does not exist, without passing regexp
+    lineinfile:
+      path: /home/vagrant/.bashrc
+      line: module add mpi
+      create: yes
+    become: false
+    when: inventory_hostname in groups['cluster_beegfs_client']
+
+
+  - name: "Update bashrc"
+    shell: source /home/vagrant/.bashrc  
+    become: false
+    when: inventory_hostname in groups['cluster_beegfs_client']
+
+  - name: "mpi setup"
+    shell: "{{ item }} chdir=/home/vagrant/ior-3.2.1/"
+    with_items:
+    - ./configure --prefix=/home/vagrant/ior
+    become: false
+    when: inventory_hostname in groups['cluster_beegfs_client']
+
+  - name: "mpi setup"
+    shell: "{{ item }} chdir=/home/vagrant/ior-3.2.1/"
+    with_items:
+    - make
+    - make install 
+    args:
+      executable: /bin/bash
+    become: false
+    when: inventory_hostname in groups['cluster_beegfs_client']
+
+
+
+  - name: Add a line to a file if the file does not exist, without passing regexp
+    lineinfile:
+      path: /home/vagrant/hostfile
+      line: client slots=25
+      create: yes
+    become: false
+    when: inventory_hostname in groups['cluster_beegfs_client']

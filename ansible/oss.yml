@@ -1,0 +1,33 @@
+---
+- hosts:
+  - cluster_beegfs_oss
+  - cluster_beegfs_mds
+  become: true
+
+  tasks:
+  - name: install the latest version of mdadm
+    yum:
+      name: mdadm
+      state: latest
+
+  - name: Create a new primary partition 
+    parted:
+      device: /dev/sdb
+      number: 1
+      state: present
+
+  - name: Create a new primary partition
+    parted:
+      device: /dev/sdc
+      number: 1
+      state: present
+ 
+ 
+- name: Raid installation
+  import_playbook: raid.yml
+  
+- name: Raid2 installation
+  import_playbook: raid2.yml
+
+
+  
