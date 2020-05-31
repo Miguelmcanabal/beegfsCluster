@@ -5,9 +5,8 @@
 
 
 ## Vagrant deploy
-To deploy all BeeGFS nodes, run:
-   	vagrant up
-   	vagrant ssh master
+   vagrant up
+   vagrant ssh master
 
 ## Ansible Playbooks
 

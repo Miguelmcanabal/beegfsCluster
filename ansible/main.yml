@@ -53,10 +53,24 @@
   - name: "Set meta storage"
     command: /opt/beegfs/sbin/beegfs-setup-meta -p /data/meta01/beegfs/beegfs_meta -f -s 2 -m mgmt
     when: inventory_hostname in groups['cluster_beegfs_mds']
+  
+  - name: "Set storage"
+    lineinfile:
+      path: /etc/beegfs/beegfs-storage.conf
+      line: 'storeStorageDirectory        = ,/mnt/md0/'   
+      state: present
+    check_mode: yes
+    register: presence
+    when: inventory_hostname in groups['cluster_beegfs_oss']
+
 
   - name: "Set storage"
     command: /opt/beegfs/sbin/beegfs-setup-storage -p /mnt/md0/ -f -s 3 -i 301 -m mgmt
-    when: inventory_hostname in groups['cluster_beegfs_oss']
+    when:
+      - inventory_hostname in groups['cluster_beegfs_oss']
+      - presence is changed
+
+
 
   - name: "Set mgmt on client"
     command: /opt/beegfs/sbin/beegfs-setup-client -m mgmt
@@ -94,9 +108,9 @@
       state: started
     when: inventory_hostname in groups['cluster_beegfs_client']
 
-   - name: config admon
-     shell: /opt/beegfs/sbin/beegfs-setup-admon -m mgmt
-     when: inventory_hostname in groups['cluster_beegfs_admon']
+  - name: config admon
+    shell: /opt/beegfs/sbin/beegfs-setup-admon -m mgmt
+    when: inventory_hostname in groups['cluster_beegfs_admon']
 
   - name: start admon
     service:
